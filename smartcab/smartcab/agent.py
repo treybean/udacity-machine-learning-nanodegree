@@ -56,7 +56,7 @@ class LearningAgent(Agent):
         ## TO DO ##
         ###########
         # Set 'state' as a tuple of relevant data for the agent
-        state = None
+        state = (waypoint, inputs['light'], inputs['left'], inputs['right'], inputs['oncoming'])
 
         return state
 
@@ -162,7 +162,8 @@ def run():
     # Follow the driving agent
     # Flags:
     #   enforce_deadline - set to True to enforce a deadline metric
-    env.set_primary_agent(agent, enforce_deadline=True)
+    env.set_primary_agent(agent)
+    # env.set_primary_agent(agent, enforce_deadline=True)
 
     ##############
     # Create the simulation
@@ -171,7 +172,8 @@ def run():
     #   display      - set to False to disable the GUI if PyGame is enabled
     #   log_metrics  - set to True to log trial and simulation results to /logs
     #   optimized    - set to True to change the default log file name
-    sim = Simulator(env, update_delay=0.01, log_metrics=True)
+    sim = Simulator(env)
+    # sim = Simulator(env, update_delay=0.01, log_metrics=True)
 
     ##############
     # Run the simulator
