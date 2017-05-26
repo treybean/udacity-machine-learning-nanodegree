@@ -8,7 +8,7 @@ class LearningAgent(Agent):
     """ An agent that learns to drive in the Smartcab world.
         This is the object you will be modifying. """
 
-    def __init__(self, env, learning=False, epsilon=1.0, alpha=0.5):
+    def __init__(self, env, learning=False, epsilon=1.0, epsilon_constant=0.5, alpha=0.5):
         super(LearningAgent, self).__init__(env)     # Set the agent in the evironment
         self.planner = RoutePlanner(self.env, self)  # Create a route planner
         self.valid_actions = self.env.valid_actions  # The set of valid actions
@@ -23,6 +23,8 @@ class LearningAgent(Agent):
         ## TO DO ##
         ###########
         # Set any additional class parameters as needed
+        self.trial_count = 0                         # Track number of trails the agent has run
+        self.epsilon_constant = epsilon_constant     # Constant to be used in epsilon decay function
 
 
     def reset(self, destination=None, testing=False):
@@ -41,10 +43,19 @@ class LearningAgent(Agent):
         # If 'testing' is True, set epsilon and alpha to 0
 
         if not(testing):
-            self.epsilon -= 0.05
+            # basic Q-learner epsilon decay
+            # self.epsilon -= 0.008
+
+            # optimized Q-learner epsilon decay
+            # self.epsilon = pow(self.epsilon_constant, self.trial_count) # ~300 trials w/epsilon_constant=0.99
+            # self.epsilon = math.exp(-0.005 * self.trial_count) #8m-A+, A-~600 trials-50 tests-alpha=0.5
+            # self.epsilon = math.cos(0.004 * self.trial_count) #5m18s-A+,A+-~375 trials-50 tests-alpha=0.5
+            self.epsilon = math.cos(self.epsilon_constant * self.trial_count)
         else:
             self.epsilon = 0
             self.alpha = 0
+
+        self.trial_count += 1
 
         return None
 
@@ -62,7 +73,7 @@ class LearningAgent(Agent):
         ## TO DO ##
         ###########
         # Set 'state' as a tuple of relevant data for the agent
-        state = (waypoint, inputs['light'], inputs['left'], inputs['right'], inputs['oncoming'])
+        state = (waypoint, inputs['light'], inputs['left'], inputs['oncoming'])
 
         return state
 
@@ -121,23 +132,35 @@ class LearningAgent(Agent):
             explore = random.random() < self.epsilon
 
             if explore:
-                action = self.choose_random_action()
+                action = self.choose_random_action(prefer_unexplored=True, state=state)
             else:
                 # currently createQ is always called before choose_action, so we
                 # don't have to test if the Q table exists for this state. It
                 # may have multiple actions with the best Q-value, though.
                 maxQ = self.get_maxQ(state)
-                bestActions = {k:v for (k,v) in self.Q[state].items() if v >= maxQ}.keys()
-                action = random.choice(bestActions)
+                best_actions = {k:v for (k,v) in self.Q[state].items() if v >= maxQ}.keys()
+                action = random.choice(best_actions)
 
         return action
 
 
-    def choose_random_action(self):
+    def choose_random_action(self, prefer_unexplored=False, state=None):
         """ Choose a random action from the list of valid actions. Note that
-            this includes 'None' as a valid action. """
+            this includes 'None' as a valid action. If prefer_unexplored is True
+            and state is set, then it tries to prefers unexplored actions over
+            already explored actions. """
 
-        return random.choice(self.valid_actions)
+        if prefer_unexplored and state:
+            unexplored_actions = {k:v for (k,v) in self.Q[state].items() if v == 0}
+
+            if len(unexplored_actions) > 0:
+                choice = random.choice(unexplored_actions.keys())
+            else:
+                choice = random.choice(self.valid_actions)
+        else:
+            choice = random.choice(self.valid_actions)
+
+        return choice
 
     def learn(self, state, action, reward):
         """ The learn function is called after the agent completes an action and
@@ -190,7 +213,7 @@ def run():
     #    * epsilon - continuous value for the exploration factor, default is 1
     #    * alpha   - continuous value for the learning rate, default is 0.5
     # agent = env.create_agent(LearningAgent)
-    agent = env.create_agent(LearningAgent, learning=True)
+    agent = env.create_agent(LearningAgent, learning=True, epsilon=1.0, alpha=0.5, epsilon_constant=0.004)
 
     ##############
     # Follow the driving agent
@@ -207,14 +230,14 @@ def run():
     #   log_metrics  - set to True to log trial and simulation results to /logs
     #   optimized    - set to True to change the default log file name
     # sim = Simulator(env)
-    sim = Simulator(env, update_delay=0.01, log_metrics=True)
+    sim = Simulator(env, update_delay=0.001, log_metrics=True, optimized=True, display=False)
 
     ##############
     # Run the simulator
     # Flags:
     #   tolerance  - epsilon tolerance before beginning testing, default is 0.05
     #   n_test     - discrete number of testing trials to perform, default is 0
-    sim.run(n_test=10)
+    sim.run(n_test=50)
 
 
 if __name__ == '__main__':
