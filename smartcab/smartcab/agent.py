@@ -44,7 +44,7 @@ class LearningAgent(Agent):
 
         if not(testing):
             # basic Q-learner epsilon decay
-            # self.epsilon -= 0.008
+            # self.epsilon -= 0.05
 
             # optimized Q-learner epsilon decay
             # self.epsilon = pow(self.epsilon_constant, self.trial_count) # ~300 trials w/epsilon_constant=0.99
@@ -132,7 +132,7 @@ class LearningAgent(Agent):
             explore = random.random() < self.epsilon
 
             if explore:
-                action = self.choose_random_action(prefer_unexplored=True, state=state)
+                action = self.choose_random_action()
             else:
                 # currently createQ is always called before choose_action, so we
                 # don't have to test if the Q table exists for this state. It
@@ -144,21 +144,11 @@ class LearningAgent(Agent):
         return action
 
 
-    def choose_random_action(self, prefer_unexplored=False, state=None):
+    def choose_random_action(self):
         """ Choose a random action from the list of valid actions. Note that
-            this includes 'None' as a valid action. If prefer_unexplored is True
-            and state is set, then it tries to prefers unexplored actions over
-            already explored actions. """
+            this includes 'None' as a valid action. """
 
-        if prefer_unexplored and state:
-            unexplored_actions = {k:v for (k,v) in self.Q[state].items() if v == 0}
-
-            if len(unexplored_actions) > 0:
-                choice = random.choice(unexplored_actions.keys())
-            else:
-                choice = random.choice(self.valid_actions)
-        else:
-            choice = random.choice(self.valid_actions)
+        choice = random.choice(self.valid_actions)
 
         return choice
 
@@ -213,7 +203,8 @@ def run():
     #    * epsilon - continuous value for the exploration factor, default is 1
     #    * alpha   - continuous value for the learning rate, default is 0.5
     # agent = env.create_agent(LearningAgent)
-    agent = env.create_agent(LearningAgent, learning=True, epsilon=1.0, alpha=0.5, epsilon_constant=0.004)
+    # agent = env.create_agent(LearningAgent, learning=True)
+    agent = env.create_agent(LearningAgent, learning=True, epsilon=1.0, alpha=0.5, epsilon_constant=0.002)
 
     ##############
     # Follow the driving agent
@@ -230,6 +221,7 @@ def run():
     #   log_metrics  - set to True to log trial and simulation results to /logs
     #   optimized    - set to True to change the default log file name
     # sim = Simulator(env)
+    # sim = Simulator(env, update_delay=0.001, log_metrics=True)
     sim = Simulator(env, update_delay=0.001, log_metrics=True, optimized=True, display=False)
 
     ##############
